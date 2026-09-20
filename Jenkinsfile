@@ -45,17 +45,18 @@ pipeline {
         }
 
         stage('Security Scan') {
-            agent {
-                docker {
-                    image 'node:16-alpine'
-                    reuseNode true
-                }
-            }
-            steps {
-                sh 'npm audit --audit-level=high'
-            }
+      agent {
+        docker {
+            image 'node:16-alpine'
+            reuseNode true
         }
-
+    }
+      steps {
+        sh 'npm audit --audit-level=high --json > npm-audit-report.json'
+        archiveArtifacts artifacts: 'npm-audit-report.json,package.json,package-lock.json,Dockerfile,Jenkinsfile',
+                         fingerprint: true
+    }
+ }
         stage('Build Docker Image') {
             agent any
             steps {
