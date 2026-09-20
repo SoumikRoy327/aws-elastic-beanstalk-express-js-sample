@@ -44,17 +44,20 @@ pipeline {
             }
         }
 
-         stage('Security Scan') {
+        stage('Security Scan') {
             agent {
-               docker {
-                 image 'node:16-alpine'
-                 reuseNode true
+                docker {
+                    image 'node:16-alpine'
+                    reuseNode true
                 }
-             }
+            }
             steps {
+                // Generate JSON security report.
+                // Pipeline fails if High/Critical vulnerabilities are detected.
                 sh 'npm audit --audit-level=high --json > npm-audit-report.json'
-           }
-         }
+            }
+        }
+
         stage('Build Docker Image') {
             agent any
             steps {
@@ -88,20 +91,23 @@ pipeline {
                 }
             }
         }
+
+        stage('Archive Artifacts') {
+            agent any
+            steps {
+                archiveArtifacts artifacts: 'npm-audit-report.json,package.json,package-lock.json,Dockerfile,Jenkinsfile',
+                                 fingerprint: true
+            }
+        }
     }
 
     post {
-    always {
-        archiveArtifacts artifacts: 'npm-audit-report.json,package.json,package-lock.json,Dockerfile,Jenkinsfile',
-                         fingerprint: true
-    }
+        success {
+            echo 'CI/CD pipeline completed successfully.'
+        }
 
-    success {
-        echo 'CI/CD pipeline completed successfully.'
+        failure {
+            echo 'CI/CD pipeline failed. Check the stage logs.'
+        }
     }
-
-    failure {
-        echo 'CI/CD pipeline failed. Check the stage logs.'
-    }
-}
 }
